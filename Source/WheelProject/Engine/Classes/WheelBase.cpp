@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "WheelNew.h"
+#include "WheelBase.h"
 #include "Components/SphereComponent.h"
 #include "Components/ChildActorComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -9,7 +9,7 @@
 #define INCH_TO_CM 2.54f
 
 #pragma region Construction
-AWheelNew::AWheelNew() : AspectRatio(40.0f), TireWidth(220.0f), RimRadius(20.0f)
+AWheelBase::AWheelBase() : AspectRatio(40.0f), TireWidth(220.0f), RimRadius(20.0f)
 {
 	USphereComponent* SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("RootComponent"));
 	RootComponent = SphereComponent;
@@ -36,7 +36,7 @@ AWheelNew::AWheelNew() : AspectRatio(40.0f), TireWidth(220.0f), RimRadius(20.0f)
 	CaliperMesh->SetGenerateOverlapEvents(false);
 }
 
-void AWheelNew::PostActorCreated()
+void AWheelBase::PostActorCreated()
 {
 	Super::PostActorCreated();
 
@@ -54,7 +54,7 @@ void AWheelNew::PostActorCreated()
 	}
 }
 
-void AWheelNew::PostLoad()
+void AWheelBase::PostLoad()
 {
 	Super::PostLoad();
 
@@ -73,7 +73,7 @@ void AWheelNew::PostLoad()
 }
 #pragma endregion
 
-void AWheelNew::ChangeRim_Implementation(TSubclassOf<ARimBase> NewRim, bool bResetSize)
+void AWheelBase::ChangeRim_Implementation(TSubclassOf<ARimBase> NewRim, bool bResetSize)
 {
 	ARimBase* Rim = GetRim();
 	if (!NewRim || !Rim)
@@ -92,7 +92,7 @@ void AWheelNew::ChangeRim_Implementation(TSubclassOf<ARimBase> NewRim, bool bRes
 	CaliperMesh->SetMorphTarget(FName(TEXT("BD_Depth")), BrakeDiscDepth);
 }
 
-void AWheelNew::ChangeTire_Implementation(USkeletalMesh* NewTireMesh, const float NewWidth)
+void AWheelBase::ChangeTire_Implementation(USkeletalMesh* NewTireMesh, const float NewWidth)
 {
 	if (!NewTireMesh)
 		return;
@@ -108,7 +108,7 @@ void AWheelNew::ChangeTire_Implementation(USkeletalMesh* NewTireMesh, const floa
 	}
 }
 
-void AWheelNew::ChangeBrakeDisc_Implementation(USkeletalMesh* NewBrakeDiscMesh)
+void AWheelBase::ChangeBrakeDisc_Implementation(USkeletalMesh* NewBrakeDiscMesh)
 {
 	if (!NewBrakeDiscMesh)
 		return;
@@ -117,7 +117,7 @@ void AWheelNew::ChangeBrakeDisc_Implementation(USkeletalMesh* NewBrakeDiscMesh)
 	BrakeDiscMesh->SetMorphTarget(FName(TEXT("BD_Depth")), BrakeDiscDepth);
 }
 
-void AWheelNew::ChangeCaliper_Implementation(USkeletalMesh* NewCaliperMesh)
+void AWheelBase::ChangeCaliper_Implementation(USkeletalMesh* NewCaliperMesh)
 {
 	if (!NewCaliperMesh)
 		return;
@@ -126,7 +126,7 @@ void AWheelNew::ChangeCaliper_Implementation(USkeletalMesh* NewCaliperMesh)
 	CaliperMesh->SetMorphTarget(FName(TEXT("BD_Depth")), BrakeDiscDepth);
 }
 
-void AWheelNew::SetRimRadius_Implementation(const float NewRadius)
+void AWheelBase::SetRimRadius_Implementation(const float NewRadius)
 {
 	RimRadius = NewRadius;
 	TireMesh->SetMorphTarget(FName(TEXT("Rim_Radius")), NormalizeRimRadius(RimRadius));
@@ -134,14 +134,14 @@ void AWheelNew::SetRimRadius_Implementation(const float NewRadius)
 		Rim->SetRadius(NewRadius);
 }
 
-void AWheelNew::SetWheelAspectRatio_Implementation(const float NewAspectRatio)
+void AWheelBase::SetWheelAspectRatio_Implementation(const float NewAspectRatio)
 {
 	AspectRatio = NewAspectRatio;
 	TireRadius = AspectRatio * TireWidth / 500.0f / INCH_TO_CM + RimRadius;
 	TireMesh->SetMorphTarget(FName(TEXT("Tire_Radius")), NormalizeTireRadius(TireRadius));
 }
 
-void AWheelNew::SetWheelWidth_Implementation(const float NewWidth)
+void AWheelBase::SetWheelWidth_Implementation(const float NewWidth)
 {
 	TireWidth = NewWidth;
 	TireMesh->SetMorphTarget(FName(TEXT("Depth")), NormalizeTireWidth(TireWidth));
@@ -151,13 +151,13 @@ void AWheelNew::SetWheelWidth_Implementation(const float NewWidth)
 		Rim->SetWidth(TireWidth);
 }
 
-ARimBase* AWheelNew::GetRim() const
+ARimBase* AWheelBase::GetRim() const
 { 
 	return Cast<ARimBase>(RimActor->GetChildActor()); 
 }
 
 #if WITH_EDITOR
-void AWheelNew::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+void AWheelBase::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
 	FName PropertyName = (PropertyChangedEvent.Property != NULL) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
 

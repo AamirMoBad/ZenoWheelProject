@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "WheelNew.generated.h"
+#include "WheelBase.generated.h"
 
 #ifndef RIM_RADIUS_MIN
 #define RIM_RADIUS_MIN 14
@@ -33,14 +33,14 @@ class ARimBase;
  * Car class.
  */
 UCLASS()
-class WHEELPROJECT_API AWheelNew : public AActor
+class WHEELPROJECT_API AWheelBase : public AActor
 {
 	GENERATED_BODY()
 
 public:	
 #pragma region Construction
 	/* Constructor*/
-	AWheelNew();
+	AWheelBase();
 	/* Post actor created*/
 	virtual void PostActorCreated() override;
 	/* Post load for actor placed in level*/
