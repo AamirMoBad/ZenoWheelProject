@@ -2,6 +2,7 @@
 
 #include "RimBase.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "PartComponent.h"
 
 #pragma region Construction
 ARimBase::ARimBase() : RimRadius(20.0f), RimWidth(220.0f)
@@ -14,6 +15,9 @@ void ARimBase::PostActorCreated()
 {
 	Super::PostActorCreated();
 
+	if (IsTemplate())
+		return;
+
 	RimMesh->SetMorphTarget(FName(TEXT("Rim_Radius")), NormalizeRadius(RimRadius));
 	RimMesh->SetMorphTarget(FName(TEXT("Depth")), NormalizeWidth(RimWidth));
 }
@@ -21,9 +25,29 @@ void ARimBase::PostActorCreated()
 void ARimBase::PostLoad()
 {
 	Super::PostLoad();
-	
+
+	if (IsTemplate())
+		return;
+
 	RimMesh->SetMorphTarget(FName(TEXT("Rim_Radius")), NormalizeRadius(RimRadius));
 	RimMesh->SetMorphTarget(FName(TEXT("Depth")), NormalizeWidth(RimWidth));
+}
+
+void ARimBase::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	if (IsTemplate())
+		return;
+
+	TArray<UActorComponent*> Components = GetComponentsByClass(UPartComponent::StaticClass());
+	for (UActorComponent* compIter : Components)
+	{
+		if (UPartComponent* PartComponent = Cast<UPartComponent>(compIter))
+		{
+			PartComponent->InitPartComponent(RimMesh);
+		}
+	}
 }
 #pragma endregion
 
@@ -47,6 +71,19 @@ void ARimBase::SetWidth_Implementation(const float NewWidth, FName MorphTargetNa
 {
 	RimWidth = NewWidth;
 	RimMesh->SetMorphTarget(MorphTargetName, NormalizeWidth(RimWidth));
+}
+
+void ARimBase::ChangeMaterial(const FString& PartName, UMaterialInterface* Mat)
+{
+	TArray<UActorComponent*> Components = GetComponentsByClass(UPartComponent::StaticClass());
+	for (UActorComponent* compIter : Components)
+	{
+		if (UPartComponent* PartComponent = Cast<UPartComponent>(compIter))
+		{
+			if (PartComponent->GetPartName() == PartName)
+				PartComponent->ChangePartMaterial(Mat);
+		}
+	}
 }
 
 #if WITH_EDITOR

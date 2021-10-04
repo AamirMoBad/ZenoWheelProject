@@ -3,79 +3,110 @@
 #include "PartComponent.h"
 #include "Engine/DataTable.h"
 
+DEFINE_LOG_CATEGORY(LogPart);
+
 // Sets default values for this component's properties
-UPartComponent::UPartComponent()
+UPartComponent::UPartComponent() : bSkeletalMesh(false)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-
-// Called when the game starts
-void UPartComponent::BeginPlay()
-{
-	Super::BeginPlay();
-
-	// ...
-	
-}
-
 void UPartComponent::InitPartComponent()
 {
-	DefaultMeshes.Empty();
+	if (bSkeletalMesh)
+		UE_LOG(LogPart, Error, TEXT("Initialing with static meshes while declared using skeletal mesh."));
+
+	ChildStaticMeshes.Empty();
+	PartIndices.Empty();
+	SkeletalMesh = nullptr;
 	TArray<USceneComponent*> ChildComponents;
 	GetChildrenComponents(false, ChildComponents);
 	for (USceneComponent* compIter : ChildComponents)
 	{
-		UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(compIter);
-		if (StaticMesh)
+		if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(compIter))
 		{
-			DefaultMeshes.Add(StaticMesh);
+			ChildStaticMeshes.Add(StaticMesh);
 			StaticMesh->SetReceivesDecals(CustomizePart.bAcceptDecals);
 			StaticMesh->SetRenderCustomDepth(true);
 		}
 	}
 }
 
-void UPartComponent::DefaultPartMaterial()
+void UPartComponent::InitPartComponent(USkeletalMeshComponent* SkeletalMeshComponent)
 {
-	if (!CustomizePart.DefaultMaterial || DefaultMeshes.Num() <= 0)
-		return;
+	if (!bSkeletalMesh)
+		UE_LOG(LogPart, Error, TEXT("Initialing with skeletal mesh while declared using static meshes."));
 
-	PartMaterial = UMaterialInstanceDynamic::Create(CustomizePart.DefaultMaterial, this);
-		
-	for (UStaticMeshComponent* mesh : DefaultMeshes)
+	ChildStaticMeshes.Empty();
+	SkeletalMesh = SkeletalMeshComponent;
+	if (SkeletalMesh)
 	{
-		if (mesh)
-			mesh->SetMaterial(0, PartMaterial);
+		SkeletalMesh->SetRenderCustomDepth(true);
+		if (CustomizePart.DefaultMaterial)
+		{
+			for (int indexIter : PartIndices)
+				SkeletalMesh->SetMaterial(indexIter, CustomizePart.DefaultMaterial);
+		}
 	}
 }
 
-void UPartComponent::ChangePartMaterial(UMaterialInterface* mat)
+void UPartComponent::DefaultPartMaterial()
 {
-	if (!mat || DefaultMeshes.Num() <= 0)
-		return;
-
-	if (Cast<UMaterialInstanceDynamic>(mat))
+	if (!CustomizePart.DefaultMaterial || IsEmpty())
 	{
-		PartMaterial = Cast<UMaterialInstanceDynamic>(mat);
+		UE_LOG(LogPart, Warning, TEXT("Early exit while changing materials."));
+		return;
+	}
+		
+	PartMaterial = UMaterialInstanceDynamic::Create(CustomizePart.DefaultMaterial, this);
+	
+	if (bSkeletalMesh)
+	{
+		for (int indexIter : PartIndices)
+			SkeletalMesh->SetMaterial(indexIter, PartMaterial);
 	}
 	else
 	{
-		PartMaterial = UMaterialInstanceDynamic::Create(mat, this);
-	}
-
-	for (UStaticMeshComponent* mesh : DefaultMeshes)
-	{
-		if (mesh)
-			mesh->SetMaterial(0, PartMaterial);
+		for (UStaticMeshComponent* meshIter : ChildStaticMeshes)
+		{
+			if (meshIter)
+				meshIter->SetMaterial(0, PartMaterial);
+		}
 	}
 }
 
-void UPartComponent::OnChildAttached(USceneComponent* ChildComponent)
+void UPartComponent::ChangePartMaterial(UMaterialInterface* Mat)
 {
+	if (!Mat || IsEmpty())
+	{
+		UE_LOG(LogPart, Warning, TEXT("Early exit while changing materials."));
+		return;
+	}
 
+	if (Cast<UMaterialInstanceDynamic>(Mat))
+	{
+		PartMaterial = Cast<UMaterialInstanceDynamic>(Mat);
+	}
+	else
+	{
+		PartMaterial = UMaterialInstanceDynamic::Create(Mat, this);
+	}
+
+	if (bSkeletalMesh)
+	{
+		for (int indexIter : PartIndices)
+			SkeletalMesh->SetMaterial(indexIter, PartMaterial);
+	}
+	else
+	{
+		for (UStaticMeshComponent* meshIter : ChildStaticMeshes)
+		{
+			if (meshIter)
+				meshIter->SetMaterial(0, PartMaterial);
+		}
+	}
 }
 
 FString UPartComponent::ToReadablePartName(const FString& str)
@@ -155,20 +186,32 @@ void UPartComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChang
 {
 	FName PropertyName = (PropertyChangedEvent.Property != NULL) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
 
-	UE_LOG(LogBlueprint, Display, TEXT("BP property changed: %s."), *PropertyName.ToString());
-
-	if (PropertyName.ToString() == "DefaultMaterial") // Only create new dynamic material if material is null or material changed.
+	if (PropertyName == GET_MEMBER_NAME_CHECKED(FCustomizePart, DefaultMaterial))
 	{
 		if (!CustomizePart.DefaultMaterial)
 			return;
-		TArray<USceneComponent*> ChildComponents;
-		GetChildrenComponents(false, ChildComponents);
-		for (USceneComponent* compIter : ChildComponents)
+
+		if (bSkeletalMesh)
 		{
-			UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(compIter);
-			if (StaticMesh)
+			if (SkeletalMesh)
 			{
-				StaticMesh->SetMaterial(0, CustomizePart.DefaultMaterial);
+				/*for (int indexIter : PartIndices)
+				{
+					// Doesn't do anything.
+					SkeletalMesh->SetMaterial(indexIter, CustomizePart.DefaultMaterial);
+				}*/
+			}
+		}
+		else
+		{
+			TArray<USceneComponent*> ChildComponents;
+			GetChildrenComponents(false, ChildComponents);
+			for (USceneComponent* compIter : ChildComponents)
+			{
+				if (UStaticMeshComponent* StaticMesh = Cast<UStaticMeshComponent>(compIter))
+				{
+					StaticMesh->SetMaterial(0, CustomizePart.DefaultMaterial);
+				}
 			}
 		}
 	}

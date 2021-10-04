@@ -8,6 +8,7 @@
 #include "RimBase.generated.h"
 
 class USkeletalMeshComponent;
+class UPartComponent;
 
 #ifndef RIM_RADIUS_MIN
 #define RIM_RADIUS_MIN 14.0f
@@ -38,6 +39,8 @@ public:
 	virtual void PostActorCreated() override;
 	/* Post load for actor placed in level*/
 	virtual void PostLoad() override;
+	/* Post components initialized*/
+	virtual void PostInitializeComponents() override;
 #pragma endregion
 
 	/**
@@ -81,6 +84,9 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Rim")
 		float GetCurrentRadius() const { return RimRadius; }
+
+	UFUNCTION(BlueprintCallable)
+		void ChangeMaterial(const FString& PartName, UMaterialInterface* Mat);
 
 #pragma region Helper Function
 protected:
